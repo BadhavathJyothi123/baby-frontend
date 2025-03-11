@@ -1,0 +1,298 @@
+// appointment.js//
+
+import React, {useState,useEffect} from "react"
+
+import {useParams, useNavigate} from "react-router-dom"
+import "../styles/Appointment.css"
+
+const Appointment = () => {
+  const {id} = useParams() //doctor_id
+  const navigate = useNavigate()
+
+  const [appointments, setAppointments] = useState([]);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+     fetch(`http://localhost:3000/appointments`)
+     .then((response) => {
+        if (!response.ok){
+            console.log("Network response was not ok")
+        }
+        return response.json()
+     })
+     .then((data) => setAppointments(data))
+     .catch((err) => setError(err.message));
+  }, [id]);
+
+  if(error){
+    return <div className="error-message">{error}</div>
+  }
+
+  if (!appointments || appointments.length === 0){
+    return (
+        <div className="appointment-container">
+            <h1>Appointments for Doctor {id}</h1>
+            <p>No appointments found.</p>
+            <button onClick={() => navigate(-1)}>Back</button>
+        </div>
+    )
+  }
+
+  return (
+    <div className="appointment-container">
+      <h1>Appointments for Doctor {id}</h1>
+      <ul className="appointment-list">
+        {appointments.map((app) => (
+            <li key={app.id} className="appointment-item">
+                <div className="appointment-info">
+                    <strong>Date:</strong>{app.date}
+                </div>
+                <div className="appointment-info">
+                    <strong>PatientName:</strong>{app.patient_name}
+                </div>
+                <div className="appointment-info">
+                    <strong>Duration:</strong>{app.duration}
+                </div>
+                <div className="appointment-info">
+                    <strong>Appointment Type:</strong>{app.appointment_type}
+                </div>
+                <div className="appointment-info">
+                    <strong>Notes:</strong>{app.notes}
+                </div>
+            </li>
+        ))}
+      </ul>
+      <buuton onClick={()=> navigate(-1)}>Back to Doctor</buuton>
+    </div>
+  )
+  
+}
+
+export default Appointment
+
+
+//appointForm.js //
+import React, {useState} from "react"
+
+import {useParams, useNavigate} from "react-router-dom"
+import "../styles/Appointment.css"
+
+const AppointmentForm = () => {
+    const {id} = useParams() //doctor_id
+    const navigate = useNavigate()
+
+    const [formData, setFormData] = useState({
+      date:"",
+      patient_name:"",
+      duration:"",
+      appointment_type:"",
+      notes:"",
+    });
+
+    const [formErrors,setFormErrors] = useState({})
+
+    const handleChange = event => {
+        setFormData ({...formData,[event.target.name]:event.target.value})
+    }
+
+    const handleSubmit = e => {
+        e.preventDefault()
+        let errors = {}
+        if (!formData.date) errors.date = "Date is Required";
+        if (!formData.patient_name) errors.date = "patientName is Required";
+        if (!formData.duration) errors.date = "Duration is Required";
+        if (!formData.appointment_type) errors.date = "appointmentType is Required";
+        setFormErrors(errors);
+        if (Object.keys(errors).length === 0) {
+            fetch(`http://localhost:3000/appointments`, {
+                method: "POST",
+                headers : {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({...formData, doctor_id:id})
+            })
+            .then((response) => {
+                if (!response.ok){
+                     console.log("Failed to create appointment");
+                }
+                return response.json()
+            })
+            .then((data) => {
+                console.log("Appointment created successfully:",data)
+                navigate(`/doctors/${id}/appointments`);
+            })
+            .catch((err) => {
+                console.log(err)
+                alert("Failed to create appointment")
+            })
+        }
+
+    };
+
+    return (
+        <div className="appointment-form-container">
+            <h1>Create Appointment</h1>
+            <form onSubmit={handleSubmit}>
+                <input 
+                type="date-local" 
+                name="date" 
+                value={formData.date} 
+                onChange={handleChange} 
+                placeholder="Date" />
+                {formErrors.date && <p className="err-message">{formErrors.date}</p>}
+                <input 
+                type="text" 
+                name="patient_name" 
+                value={formData.patient_name} 
+                onChange={handleChange} 
+                placeholder="Patient Name" />
+                {formErrors.patient_name && <p className="err-message">{formErrors.patient_name}</p>}
+                <input 
+                type="number" 
+                name="duration" 
+                value={formData.duration} 
+                onChange={handleChange} 
+                placeholder="Duration" />
+                {formErrors.duration && <p className="err-message">{formErrors.duration}</p>}
+                <input 
+                type="text" 
+                name="appointment_type" 
+                value={formData.appointment_type} 
+                onChange={handleChange} 
+                placeholder="Appointment Type" />
+                {formErrors.appointment_type && <p className="err-message">{formErrors.appointment_type}</p>}
+                <textarea name="notes" value={formData.notes}  onChange={handleChange} placeholder="Notes" />
+                <button type="submit">Create Appointment</button>
+                <button type="button" onClick={() => navigate(-1)}>Back</button>
+            </form> 
+        </div>
+    )
+}
+
+export default AppointmentForm
+
+//doctors.js //
+import React, {useState,useEffect} from "react"
+
+import {useParams, useNavigate,Link} from "react-router-dom"
+import "../styles/Doctor.css"
+
+const Doctor = () => {
+  const {id} = useParams();
+  const [doctor, setDoctor] = useState(null);
+  const [error,setError] = useState(null)
+
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    fetch(`http://localhost:3000/doctors/${id}`)
+    .then((response) => {
+        if (!response){
+            console.log("Network response was not ok")
+        }
+        return response.json()
+     })
+     .then((data) => setDoctor(data))
+     .catch((err) => setError(err.message));
+  }, [id]);
+
+  if(error){
+    return <div className="error-message">{error}</div>
+  }
+
+  if (!doctor){
+    return <p>Loading doctor details....</p>
+  }
+
+  return (
+    <div className="doctor-container">
+        <h1>Doctor Details</h1>
+        <div className="doctor-info">
+            <strong>Name:</strong>
+            {doctor.name}
+        </div>
+        <div className="doctor-info">
+            <strong>workinghours Start:</strong>
+            {doctor.workinghours_statr}
+        </div>
+        <div className="doctor-info">
+            <strong>workinghours End:</strong>
+            {doctor.workinghours_end}
+        </div>
+        <div className="doctor-info">
+            <strong>Specilization:</strong>
+            {doctor.specilization}
+        </div>
+        <Link to={`/doctors/${id}/appointments`}>View Appointments</Link>
+        <button onClick={() => navigate(-1)}>Back to List</button>
+    </div>
+  )
+}
+
+export default Doctor
+
+//DoctorList.js //
+
+import React, {useState,useEffect} from "react"
+
+import {Link} from "react-router-dom"
+import "../styles/DoctorList.css"
+
+const DoctorList = () => {
+const [doctors,setDoctors] = useState([]);
+const [error,setError] = useState(null);
+
+useEffect(() => {
+    fetch("http://localhost:3000/doctors")
+    .then((response) => {
+        if (!response){
+            console.log("Network response was not ok")
+        }
+        return response.json()
+     })
+     .then((data) => setDoctors(data))
+     .catch((err) => setError(err.message));
+},[])
+
+if(error){
+    return <div className="error-message">{error}</div>
+  }
+
+  return (
+    <div className="doctors-list-container">
+        <h1>Doctors List</h1>
+        {doctors.length > 0 ? (
+             <ul className="doctors-list">
+             {doctors.map((doctor) => (
+              <li key={doctor.id} className="doctor-item">
+                 <Link to={`/doctors/${doctor.id}`} className="doctor-link">
+                 <div className="doctor-info">
+                     <strong>Name:</strong>
+                     {doctor.name}
+                 </div>
+                 <div className="doctor-info">
+                 <strong>workinghours Start:</strong>
+                 {doctor.workinghours_statr}
+             </div>
+             <div className="doctor-info">
+                 <strong>workinghours End:</strong>
+                 {doctor.workinghours_end}
+             </div>
+             <div className="doctor-info">
+                 <strong>Specilization:</strong>
+                 {doctor.specilization}
+             </div>
+                 </Link>
+              </li>
+             ))}
+             </ul>
+        ):(
+            <p>Loading doctors.....</p>
+        )}
+       
+    </div>
+  );
+}
+
+export default DoctorList
+
